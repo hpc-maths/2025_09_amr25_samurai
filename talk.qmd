@@ -1,0 +1,418 @@
+---
+title: Set Algebra and Recursive Interval Representation
+subtitle:  A Unified Framework for MultiDimensional Adaptive Mesh Refinement Methods
+author:
+    - Loïc Gouarin
+format:
+  revealjs:
+    css: css/light.css
+    # css: css/neo-brutalism.css
+
+    logo: figures/logo_HPC@Maths.jpg
+    slide-number: true
+resources:
+  - videos/**
+highlight-style: github
+footer: AMR25 - <img width="5%" src="figures/by-sa.png"/> - September 02 to 04, 2025
+---
+
+
+# Context
+```{=html}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+```
+
+## Patched-based representation
+
+
+::::{.center-page-vertically-2 .lh-lg}
+:::{.row}
+::::{.col}
+:::::{.callout-tip icon=false title="Advantages"}
+- compact data structure
+- rectangular zones work well for tiling and optimizing caches
+- efficient to work with neighbors and the different levels
+:::::
+:::::{.callout-important  icon=false title="Disadvantages"}
+- requires more cells than necessary
+  - grid hierarchy: overlapping
+  - larger refinement zone
+:::::
+
+::::
+::::{.col-4 .align-self-center}
+![](figures/patch_based.png)
+::::
+:::
+::::
+## Cell-based representation
+
+::::{.center-page-vertically-2 .lh-lg}
+:::{.row}
+::::{.col}
+:::::{.callout-tip icon=false title="Advantages"}
+- no grids hierarchy
+- keep only needed cells
+:::::
+:::::{.callout-important  icon=false title="Disadvantages"}
+- more difficult to find the neighbors
+- more difficult to work with the different levels
+- tree-like structure
+- more difficult to add ghost cells hierarchy
+:::::
+
+::::
+::::{.col-4 .align-self-center}
+![](figures/cell_based.png)
+::::
+:::
+::::
+
+:::{.notes}
+If we look at all the open source software specializing in dynamic mesh adaptation, there are two main families:
+- patch-based, which is a hierarchical representation of the mesh: layers are placed on top of layers
+- cell-based, which is a flat representation of the mesh
+
+Each has its advantages and disadvantages:
+- patch-based has rectangular zones for tiling and optimizing caches. But it generally requires more cells than necessary.
+- cell-based requires far fewer cells but requires a tree-like structure, which means that you lose the good memory locality you had with patch-based. We use space filling curves such as Morton or Hilbert to find an acceptable locality.
+:::
+
+---
+
+:::{.center-page .h1}
+Can we have a data structure that takes the advantages of both and well suited to implement various adaptive mesh refinement methods ?
+:::
+
+<!-- ## Open source software
+
+:::::{.center-page}
+
+::: {.fs-5}
+| Name    | Data structure | Adaptation criteria | Time scheme                     | Load balancing               |
+|---------|----------------|---------------------|---------------------------------|------------------------------|
+| AMReX   | block          | heuristic           | global/local                    | SFC                          |
+| Dendro  | tree           | wavelet             | global                          | SFC                          |
+| Dyablo  | tree           | heuristic           | global                          | SFC                          |
+| Peano   | tree           | -                   | -                               | SFC                          |
+| P4est   | tree           | -                   | -                               | SFC                          |
+| samurai | interval       | heuristic/wavelet   | RK/splitting/IMEX<br>time-space/code coupling               | SFC/diffusion algorithm      |
+:::
+
+::: {.text-center .color .mt-5 .fragment}
+*samurai: create a unified framework for testing a whole range<br class='m-0'>of mesh adaptation methods with the latest generation of numerical schemes.*
+:::
+:::::
+
+:::{.notes}
+Here's an overview of the software we think is interesting to look at today.
+
+Peano and p4est don't have any adaptation or time-scheme criteria, as they are software programs specializing solely in mesh management.
+::: -->
+---
+
+:::{.center-page}
+::::{.row}
+:::::{.col-6}
+![](figures/logo.png)
+::::::
+::::::{.col-6 .align-self-center .text-end}
+:::{.h1 .title-talk}
+Samurai
+:::
+::::::
+::::
+:::
+
+## Design principles
+
+:::{.center-page-vertically .lh-lg}
+- Compress the mesh according to the level-wise spatial connectivity along each Cartesian axis.
+- Achieve fast look-up for a cell into the structure, especially for parents and neighbors.
+- Maximize the memory contiguity of the stored data to allow for caching and vectorization.
+- Facilitate inter-level operations which are common in many numerical techniques.
+:::
+
+## An overview of the data structure
+
+::: {.row}
+
+:::: {.col-5}
+![](figures/2d_example.png)
+::::
+
+:::: {.col .text-center .align-self-center}
+<span class="interval_symb">[</span>
+<span class="interval_bound">start</span>
+<span class="interval_symb">,</span>
+<span class="interval_bound">end</span>
+<span class="interval_symb">[ @ </span>
+<span class="interval_offset">offset</span>
+::::
+
+:::
+
+:::{.notes}
+We illustrate the samurai data structure, starting with a 2D problem to see all the components. The data structure is fully recursive and can therefore handle Nd Cartesian meshes.
+
+The main element of samurai is an interval modeled by its beginning and non-included end. There's also an offset parameter that will serve us in two different ways. We'll come back to this later.
+:::
+
+## An overview of the data structure
+
+::: {.row}
+
+:::: {.col-4}
+![](figures/2d_example_xcoords.png)
+::::
+
+:::: {.col-2 .fragment data-fragment-index="1"}
+![](figures/2d_example_ycoords.png){height="254px"}
+::::
+
+```{=html}
+{{< include codes/celllist.html >}}
+```
+:::
+
+:::{.notes}
+The first thing we're going to do is go through each level and each y-component, and look at the set of contiguous cells along the x-axis to construct intervals.
+:::
+
+## Identify the different types of cells
+
+```{=html}
+<video data-autoplay src="videos/identify_0000.mp4" />
+```
+
+:::{.notes}
+During the calculation, we'll adapt the mesh to give us this type of configuration. We'll need several additional cells to advance our equations in time, but also to adapt the mesh over time.
+
+Here we only have the mesh cells called leaves when you're in a tree configuration.
+:::
+
+## Identify the different types of cells
+
+```{=html}
+<video data-autoplay src="videos/identify_0001.mp4" />
+```
+
+:::{.notes}
+Generally, you have a spatial scheme with a stencil, so we need to add cells called ghosts on either side of our intervals.
+:::
+
+## Identify the different types of cells
+
+```{=html}
+<video data-autoplay src="videos/identify_0002.mp4" />
+```
+
+:::{.notes}
+There are two ways of looking at it: you can try to store only the ghost cell intervals. As you can see, the list can be quite large, especially if our mesh is quite fragmented. So we've lost some data compression, even though that's what we were selling.
+Can we do better?
+:::
+
+
+## Identify the different types of cells
+
+```{=html}
+<video data-autoplay src="videos/identify_0003.mp4" />
+```
+
+:::{.notes}
+If we group together cells called leaves and ghosts, we have a much more compact version. We can even say that it's more compact than the version with leaves, because it allows interval merging.
+
+But this leads to another problem: if we use this set, how do we find our ghosts?
+:::
+
+## Algebra of sets
+
+:::{.text-center}
+<img class="border border-2" src="figures/mesh_all.png" width="400px"/><span>\\</span>
+<img class="border border-2" src="figures/mesh.png" width="400px"/>
+
+<span>=</span>
+
+<img class="border border-2" src="figures/mesh_ghost.png" width="400px"/>
+:::
+
+## Algebra of sets
+
+The search of an admissible set is recursive. The algorithm starts from the last dimension (y in 2d, z in 3d,...).
+
+:::{.my-3}
+The available operators in samurai are for now
+:::
+
+:::{.lh-lg}
+- the <span>intersection</span> of sets,
+- the <span>union</span> of sets,
+- the <span>difference</span> between two sets,
+- the <span>translation</span> of a set,
+- the <span>projection</span> of a set.
+:::
+
+:::{.notes}
+The search for an admissible set is completely recursive. We'll start by searching in the largest dimension and if we don't find anything we'll stop.
+
+If an admissible interval is found, we look at it in the lower dimension, which means we manipulate very few intervals because we're only looking at a subset.
+:::
+
+## Usage example: the projection operator
+
+::::{.center-page}
+:::{.row}
+::::{.col-6}
+```{=html}
+<video data-autoplay src="videos/projection.mp4" />
+```
+::::
+
+::::{.col-6 .fragment .align-self-center}
+```{.cpp}
+auto set = intersection(mesh[level], mesh[level + 1])
+          .on(level);
+
+set([&](auto i)
+{
+    u(level, i) = 0.5*(u(level+1, 2*i) + u(level+1, 2*i+1));
+});
+```
+::::
+:::
+::::
+
+## Compression rates
+
+![](figures/p4est_3.png)
+
+## Compression rates
+
+::: {.center-page .fs-5}
+| Level | Num. of cells | p4est       | samurai (leaves) | samurai (all) | ratio  |
+|-------|---------------|-------------|------------------|---------------|--------|
+| $9$   | 66379         | 2.57 Mb     | 33.68 Kb         | 121 Kb        | 21.24  |
+| $10$  | 263767        | 10.25 Mb    | 66.64 Kb         | 236.8 Kb      | 43.28  |
+| $11$  | 1051747       | 40.96 Mb    | 132.36 Kb        | 467.24 Kb     | 87.66  |
+| $12$  | 4200559       | 163.75 Mb   | 263.6 Kb         | 927 Kb        | 176.64 |
+| $13$  | 16789627      | 654.86 Mb   | 525.9 Kb         | 1.85 Mb       | 353.98 |
+| $14$  | 67133575      | 2.61 Gb     | 1.05 Mb          | 3.68 Mb       | 709.24 |
+:::
+
+:::{.notes}
+We can see here that the mesh is very compressed compared to a version using a tree structure.
+
+The total size of the mesh is multiplied by just under 4, as we build different meshes to handle ghost cells and prediction cells.
+
+What's important to note is that in a parallel context, it doesn't cost much for each process to have the meshes of its neighboring domains.
+:::
+
+## Roadmap
+
+:::{.text-center}
+![](figures/roadmap.png)
+:::
+
+:::{.notes}
+Here's the samurai roadmap for the coming months and probably years.
+
+We now have the possibility of changing the containers in which our fields are stored. We did this so that we could start using Kokkos. So we'd be very interested in working with the people at Cexa on this.
+
+We have received several funding packages that have enabled us to hire two research engineers.
+
+As part of numpex, we also have an engineer position to work on the I/O part of AMR methods in collaboration with Dyablo developers.
+:::
+
+---
+
+:::::{.center-page}
+::::{.columns}
+:::{.column width="50%"}
+### People involved
+- 4 core developers
+- dozen of collaborations
+
+:::{.row .text-center .align-items-center}
+::::{.col}
+![](figures/numpex_logo.png){height="110px"}
+::::
+::::{.col}
+![](figures/quantstack.png){height="50px"}
+::::
+:::
+:::{.row .text-center .align-items-center}
+::::{.col}
+![](figures/cea.png){height="80px"}
+::::
+::::{.col}
+![](figures/logo_nasa.jpg){height="95px"}
+::::
+:::
+:::
+:::{.column width="50%"}
+### Real-World Applications
+- Interfacial flow simulation
+- Simulation analysis on the Hydrogen risk
+- Plasma dynamics
+- Battery simulation
+- Combustion modeling
+:::
+::::
+:::::
+---
+
+:::::{.center-page}
+:::{.row .align-items-center}
+::::{.col-4}
+<video data-autoplay loop="true" src="videos/ink.mp4" />
+::::
+::::{.col}
+![](figures/human.png)
+::::
+::::{.col-5}
+![](figures/lbm_test_case.png)
+::::
+:::
+
+:::{.row .align-items-center}
+::::{.col-4}
+<video data-autoplay loop="true" src="videos/bubble.mp4" />::::
+::::{.col}
+![](figures/plasma.png)
+::::
+:::
+:::::
+
+---
+
+:::{.center-page}
+::::{.row}
+:::::{.col-6}
+![](figures/logo.png)
+::::::
+::::::{.col-6 .align-self-center .text-end}
+:::{.h1 .title-talk}
+Samurai
+:::
+[https://github.com/hpc-maths/samurai](https://github.com/hpc-maths/samurai)
+::::::
+::::
+:::
+
+<!-- ## Scientific Collaborations
+
+
+
+- Lattice Boltzmann methods and multiresolution - **Thomas Bellotti** (*EM2C/CNRS/CS*) and **Benjamin Graille** (*LMO/Université Paris-Saclay*)
+- Plasma discharges and electric propulsion - **Alejandro Alvarez** (*LPP/École polytechnique*) and **Louis Reboul** (*ONERA*)
+- DNS of lithium-ion batteries based on high-resolution 3D images of porous electrode microstructures - **Ali Asad** (*TotalEnergies*) and **Laurent François** (*ONERA*)
+- Sharp interface method for low Mach two-phase flows - **Nicolas Grenier** (*LISN/Université Paris-Saclay*) and **Christian Tenaud** (*EM2C/CNRS/CS*)
+- Low-Mach reactive flows - **Christian Tenaud** (*EM2C/CNRS/CS*)
+- Interfacial flow simulation - **Giuseppe Orlando** and **Ward Haegeman** (*CMAP/Ecole polytechnique*), **Samuel Kokh** (*CEA/MdlS*), **Joël Dupays** and **Clément Le Touze** (*ONERA*), **Marica Pelanti** (*ENSTA/IP Paris*), **Khaled Saleh** (*Aix-Marseille Université*), **Jean-Marc Hérard** (*EDF*)
+- Mathematical modeling and simulation of non-equilibrium plasmas for the prediction of electric propulsion - **Teddy Pichard** and **Zoubaïr Tazakkati** (*CMAP/École polytechnique*)
+- Simulation analysis on the Hydrogen risk - **Luc Lecointre**, **Pierre-Alexandre Masset**, **Etienne Studer** (*CEA*) and **Christian Tenaud** (*EM2C/CNRS/CS*) -->
+
+
+
+<!-- {{< include sections/examples.qmd >}} -->
