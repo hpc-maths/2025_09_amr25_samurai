@@ -1,1 +1,1 @@
-https://gouarin.github.io/2025-01-mdls-talk/
+https://gouarin.github.io/2025-09-amr25/
