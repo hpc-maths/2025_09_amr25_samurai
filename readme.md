@@ -1,1 +1,1 @@
-https://gouarinhpc-maths.github.io/2025_09_amr25_samurai/
+https://hpc-maths.github.io/2025_09_amr25_samurai/
