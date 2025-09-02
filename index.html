@@ -400,7 +400,10 @@
 <div class="quarto-title-author-name">
 Loïc Gouarin 
 </div>
-</div>
+        <p class="quarto-title-affiliation">
+            HPC@Maths team <br> CMAP / CNRS - Ecole polytechnique
+          </p>
+    </div>
 </div>
 
 </section>
@@ -514,6 +517,85 @@ Loïc Gouarin
           display:block!important;
       }</style></aside>
 </section>
+<section id="adaptive-methods" class="slide level2">
+<h2>Adaptive methods</h2>
+<div class="center-page-vertically-2 lh-lg">
+<div class="row">
+<div class="col">
+<div class="h3">
+<p>AMR</p>
+</div>
+<div title="Advantages">
+<div class="callout callout-tip no-icon callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<p><strong>Advantages</strong></p>
+</div>
+<div class="callout-content">
+<ul>
+<li>based on heuristic criteria (gradient, second derivative, …)</li>
+<li>easy to implement</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div title="Disadvantages">
+<div class="callout callout-important no-icon callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<p><strong>Disadvantages</strong></p>
+</div>
+<div class="callout-content">
+<ul>
+<li>physical problem understanding is important</li>
+<li>add potentially more cells that needed</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="col">
+<div class="h3">
+<p>MRA <span class="fs-5">(see the presentation of <strong>M. Massot</strong>)</span></p>
+</div>
+<div title="Advantages">
+<div class="callout callout-tip no-icon callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<p><strong>Advantages</strong></p>
+</div>
+<div class="callout-content">
+<ul>
+<li>based on wavelet decomposition</li>
+<li>error control</li>
+<li>independent of the physical problem</li>
+<li>only needed cells</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div title="Disadvantages">
+<div class="callout callout-important no-icon callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<p><strong>Disadvantages</strong></p>
+</div>
+<div class="callout-content">
+<ul>
+<li>difficult to implement with the current data structures</li>
+<li>can be costly</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
 <section class="slide level2">
 
 <div class="center-page h1">
@@ -567,7 +649,7 @@ Peano and p4est don't have any adaptation or time-scheme criteria, as they are s
 <li>Compress the mesh according to the level-wise spatial connectivity along each Cartesian axis.</li>
 <li>Achieve fast look-up for a cell into the structure, especially for parents and neighbors.</li>
 <li>Maximize the memory contiguity of the stored data to allow for caching and vectorization.</li>
-<li>Facilitate inter-level operations which are common in many numerical techniques.</li>
+<li>Manage and facilitate complex operations between meshes (numerical schemes, MRA, …).</li>
 </ul>
 </div>
 </section>
@@ -754,6 +836,22 @@ Peano and p4est don't have any adaptation or time-scheme criteria, as they are s
           display:block!important;
       }</style></aside>
 </section>
+<section id="usage-example-find-jumps" class="slide level2">
+<h2>Usage example: find jumps</h2>
+<div class="center-page">
+<div class="row">
+<div class="col-6">
+<video data-autoplay="" loop="" src="videos/jump.mp4">
+</video></div>
+<div class="col-6 align-self-center">
+<div class="sourceCode" id="cb1"><pre class="sourceCode numberSource cpp number-lines code-with-copy"><code class="sourceCode cpp"><span id="cb1-1"><a href=""></a><span class="kw">auto</span> jump_set <span class="op">=</span> intersection<span class="op">(</span></span>
+<span id="cb1-2"><a href=""></a>                    translate<span class="op">(</span>mesh<span class="op">[</span><span class="dv">1</span><span class="op">],</span> <span class="op">{</span><span class="dv">1</span><span class="op">}).</span>on<span class="op">(</span><span class="dv">0</span><span class="op">),</span></span>
+<span id="cb1-3"><a href=""></a>                    mesh<span class="op">[</span><span class="dv">0</span><span class="op">]</span></span>
+<span id="cb1-4"><a href=""></a>                <span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+</div>
+</section>
 <section id="usage-example-the-projection-operator" class="slide level2">
 <h2>Usage example: the projection operator</h2>
 <div class="center-page">
@@ -762,13 +860,13 @@ Peano and p4est don't have any adaptation or time-scheme criteria, as they are s
 <video data-autoplay="" src="videos/projection.mp4">
 </video></div>
 <div class="col-6 fragment align-self-center">
-<div class="sourceCode" id="cb1"><pre class="sourceCode numberSource cpp number-lines code-with-copy"><code class="sourceCode cpp"><span id="cb1-1"><a href=""></a><span class="kw">auto</span> set <span class="op">=</span> intersection<span class="op">(</span>mesh<span class="op">[</span>level<span class="op">],</span> mesh<span class="op">[</span>level <span class="op">+</span> <span class="dv">1</span><span class="op">])</span></span>
-<span id="cb1-2"><a href=""></a>          <span class="op">.</span>on<span class="op">(</span>level<span class="op">);</span></span>
-<span id="cb1-3"><a href=""></a></span>
-<span id="cb1-4"><a href=""></a>set<span class="op">([&amp;](</span><span class="kw">auto</span> i<span class="op">)</span></span>
-<span id="cb1-5"><a href=""></a><span class="op">{</span></span>
-<span id="cb1-6"><a href=""></a>    u<span class="op">(</span>level<span class="op">,</span> i<span class="op">)</span> <span class="op">=</span> <span class="fl">0.5</span><span class="op">*(</span>u<span class="op">(</span>level<span class="op">+</span><span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">*</span>i<span class="op">)</span> <span class="op">+</span> u<span class="op">(</span>level<span class="op">+</span><span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">*</span>i<span class="op">+</span><span class="dv">1</span><span class="op">));</span></span>
-<span id="cb1-7"><a href=""></a><span class="op">});</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode numberSource cpp number-lines code-with-copy"><code class="sourceCode cpp"><span id="cb2-1"><a href=""></a><span class="kw">auto</span> proj_set <span class="op">=</span> intersection<span class="op">(</span>mesh<span class="op">[</span>level<span class="op">],</span> mesh<span class="op">[</span>level <span class="op">+</span> <span class="dv">1</span><span class="op">])</span></span>
+<span id="cb2-2"><a href=""></a>          <span class="op">.</span>on<span class="op">(</span>level<span class="op">);</span></span>
+<span id="cb2-3"><a href=""></a></span>
+<span id="cb2-4"><a href=""></a>proj_set<span class="op">([&amp;](</span><span class="kw">auto</span> i<span class="op">)</span></span>
+<span id="cb2-5"><a href=""></a><span class="op">{</span></span>
+<span id="cb2-6"><a href=""></a>    u<span class="op">(</span>level<span class="op">,</span> i<span class="op">)</span> <span class="op">=</span> <span class="fl">0.5</span><span class="op">*(</span>u<span class="op">(</span>level<span class="op">+</span><span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">*</span>i<span class="op">)</span> <span class="op">+</span> u<span class="op">(</span>level<span class="op">+</span><span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">*</span>i<span class="op">+</span><span class="dv">1</span><span class="op">));</span></span>
+<span id="cb2-7"><a href=""></a><span class="op">});</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 </div>
@@ -867,6 +965,21 @@ Peano and p4est don't have any adaptation or time-scheme criteria, as they are s
           display:block!important;
       }</style></aside>
 </section>
+<section id="other-features" class="slide level2">
+<h2>Other features</h2>
+<div class="center-page-vertically lh-lg">
+<ul>
+<li>Loop algorithms over the levels and the cells</li>
+<li>Simplified access operator</li>
+<li>Reconstruct a value anywhere even if the cell doesn’t exist</li>
+<li>Helper classes to construct complex meshes</li>
+<li>Helper classes to construct schemes for explicit and implicit usage</li>
+<li>Helper classes to construct N-D operators and expressions using xtensor or Eigen</li>
+<li>MPI support</li>
+<li>HDF5 support</li>
+</ul>
+</div>
+</section>
 <section id="roadmap" class="slide level2">
 <h2>Roadmap</h2>
 <div class="text-center">
@@ -897,19 +1010,28 @@ Peano and p4est don't have any adaptation or time-scheme criteria, as they are s
 <h3 id="people-involved">People involved</h3>
 <ul>
 <li>4 core developers</li>
-<li>dozen of collaborations</li>
+<li>users and developers communities</li>
+<li>Various collaborations and research programs</li>
 </ul>
 <div class="row text-center align-items-center">
 <div class="col">
 <p><img data-src="figures/numpex_logo.png" height="110"></p>
 </div>
 <div class="col">
-<p><img data-src="figures/quantstack.png" height="50"></p>
+<p><img data-src="figures/cieds_ip_paris_logo.jpg" height="100"></p>
 </div>
 </div>
 <div class="row text-center align-items-center">
 <div class="col">
+<p><img data-src="figures/quantstack.png" height="50"></p>
+</div>
+<div class="col">
 <p><img data-src="figures/cea.png" height="80"></p>
+</div>
+</div>
+<div class="row text-center align-items-center">
+<div class="col">
+<p><img data-src="figures/onera_logo.png" height="40"></p>
 </div>
 <div class="col">
 <p><img data-src="figures/logo_nasa.jpg" height="95"></p>
@@ -982,7 +1104,7 @@ Peano and p4est don't have any adaptation or time-scheme criteria, as they are s
 <div class="quarto-auto-generated-content">
 <p><img src="figures/logo_HPC@Maths.jpg" class="slide-logo"></p>
 <div class="footer footer-default">
-<p>AMR25 - <img width="5%" src="figures/by-sa.png"> - September 02 to 04, 2025</p>
+<p>Conference for Adaptive Mesh Refinement and Applications 2025 <img width="5%" src="figures/by-sa.png"> Cologne, September 02 to 04, 2025</p>
 </div>
 </div>
 </section></section>
@@ -1037,7 +1159,7 @@ Peano and p4est don't have any adaptation or time-scheme criteria, as they are s
         progress: true,
 
         // Display the page number of the current slide
-        slideNumber: 'c/t',
+        slideNumber: false,
 
         // 'all', 'print', or 'speaker'
         showSlideNumber: 'all',
