@@ -306,7 +306,7 @@ If an admissible interval is found, we look at it in the lower dimension, which 
 :::{.row}
 ::::{.col-6}
 ```{=html}
-<video data-autoplay src="videos/jump.mp4" />
+<video data-autoplay loop src="videos/jump.mp4" />
 ```
 ::::
 
