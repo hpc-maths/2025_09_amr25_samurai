@@ -2,18 +2,19 @@
 title: Set Algebra and Recursive Interval Representation
 subtitle:  A Unified Framework for MultiDimensional Adaptive Mesh Refinement Methods
 author:
-    - Loïc Gouarin
+  name: Loïc Gouarin
+  affiliation: HPC@Maths team <br> CMAP / CNRS - Ecole polytechnique
 format:
   revealjs:
     css: css/light.css
     # css: css/neo-brutalism.css
 
     logo: figures/logo_HPC@Maths.jpg
-    slide-number: true
+    # slide-number: true
 resources:
   - videos/**
 highlight-style: github
-footer: AMR25 - <img width="5%" src="figures/by-sa.png"/> - September 02 to 04, 2025
+footer: Conference for Adaptive Mesh Refinement and Applications 2025 <img width="5%" src="figures/by-sa.png"/> Cologne, September 02 to 04, 2025
 ---
 
 
@@ -79,6 +80,46 @@ Each has its advantages and disadvantages:
 - cell-based requires far fewer cells but requires a tree-like structure, which means that you lose the good memory locality you had with patch-based. We use space filling curves such as Morton or Hilbert to find an acceptable locality.
 :::
 
+## Adaptive methods
+
+::::::{.center-page-vertically-2 .lh-lg}
+:::{.row}
+::::{.col}
+
+:::{.h3}
+AMR
+:::
+
+:::::{.callout-tip icon=false title="Advantages"}
+- based on heuristic criteria (gradient, second derivative, ...)
+- easy to implement
+:::::
+:::::{.callout-important  icon=false title="Disadvantages"}
+- physical problem understanding is important
+- add potentially more cells that needed
+:::::
+::::
+::::{.col}
+
+:::{.h3}
+MRA
+:::
+
+:::::{.callout-tip icon=false title="Advantages"}
+- based on wavelet decomposition
+- error control
+- independent of the physical problem
+- only needed cells
+:::::
+:::::{.callout-important  icon=false title="Disadvantages"}
+- difficult to implement with the current data structures
+- can be costly
+:::::
+::::
+:::
+::::::
+
+
 ---
 
 :::{.center-page .h1}
@@ -131,7 +172,7 @@ Samurai
 - Compress the mesh according to the level-wise spatial connectivity along each Cartesian axis.
 - Achieve fast look-up for a cell into the structure, especially for parents and neighbors.
 - Maximize the memory contiguity of the stored data to allow for caching and vectorization.
-- Facilitate inter-level operations which are common in many numerical techniques.
+- Manage and facilitate complex operations between meshes (numerical schemes, MRA, ...).
 :::
 
 ## An overview of the data structure
@@ -259,6 +300,27 @@ The search for an admissible set is completely recursive. We'll start by searchi
 If an admissible interval is found, we look at it in the lower dimension, which means we manipulate very few intervals because we're only looking at a subset.
 :::
 
+## Usage example: find jumps
+
+::::{.center-page}
+:::{.row}
+::::{.col-6}
+```{=html}
+<video data-autoplay src="videos/jump.mp4" />
+```
+::::
+
+::::{.col-6 .align-self-center}
+```{.cpp}
+auto jump_set = intersection(
+                    translate(mesh[1], {1}).on(0),
+                    mesh[0]
+                );
+```
+::::
+:::
+::::
+
 ## Usage example: the projection operator
 
 ::::{.center-page}
@@ -271,10 +333,10 @@ If an admissible interval is found, we look at it in the lower dimension, which 
 
 ::::{.col-6 .fragment .align-self-center}
 ```{.cpp}
-auto set = intersection(mesh[level], mesh[level + 1])
+auto proj_set = intersection(mesh[level], mesh[level + 1])
           .on(level);
 
-set([&](auto i)
+proj_set([&](auto i)
 {
     u(level, i) = 0.5*(u(level+1, 2*i) + u(level+1, 2*i+1));
 });
@@ -308,6 +370,19 @@ The total size of the mesh is multiplied by just under 4, as we build different 
 What's important to note is that in a parallel context, it doesn't cost much for each process to have the meshes of its neighboring domains.
 :::
 
+## Other features
+
+:::{.center-page-vertically .lh-lg}
+- Loop algorithms over the levels and the cells
+- Simplified access operator
+- Reconstruct a value anywhere even if the cell doesn't exist
+- Helper classes to construct complex meshes
+- Helper classes to construct schemes for explicit and implicit usage
+- Helper classes to construct N-D operators and expressions using xtensor or Eigen
+- MPI support
+- HDF5 support
+:::
+
 ## Roadmap
 
 :::{.text-center}
@@ -331,19 +406,28 @@ As part of numpex, we also have an engineer position to work on the I/O part of 
 :::{.column width="50%"}
 ### People involved
 - 4 core developers
-- dozen of collaborations
+- users and developers communities
+- Various collaborations and research programs
 
 :::{.row .text-center .align-items-center}
 ::::{.col}
 ![](figures/numpex_logo.png){height="110px"}
 ::::
 ::::{.col}
-![](figures/quantstack.png){height="50px"}
+![](figures/cieds_ip_paris_logo.jpg){height="100px"}
 ::::
 :::
 :::{.row .text-center .align-items-center}
 ::::{.col}
+![](figures/quantstack.png){height="50px"}
+::::
+::::{.col}
 ![](figures/cea.png){height="80px"}
+::::
+:::
+:::{.row .text-center .align-items-center}
+::::{.col}
+![](figures/onera_logo.png){height="40px"}
 ::::
 ::::{.col}
 ![](figures/logo_nasa.jpg){height="95px"}
