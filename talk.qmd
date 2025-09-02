@@ -102,7 +102,7 @@ AMR
 ::::{.col}
 
 :::{.h3}
-MRA
+MRA <span class="fs-5">(see the presentation of <strong>M. Massot</strong>)</span>
 :::
 
 :::::{.callout-tip icon=false title="Advantages"}
