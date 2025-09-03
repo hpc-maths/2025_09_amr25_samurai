@@ -171,7 +171,7 @@ Samurai
 :::{.center-page-vertically .lh-lg}
 - Compress the mesh according to the level-wise spatial connectivity along each Cartesian axis.
 - Achieve fast look-up for a cell into the structure, especially for parents and neighbors.
-- Maximize the memory contiguity of the stored data to allow for caching and vectorization.
+- Maximize the memory contiguity of the stored data to enable caching and vectorization.
 - Manage and facilitate complex operations between meshes (numerical schemes, MRA, ...).
 :::
 
